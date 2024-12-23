@@ -8,20 +8,20 @@ def lambda_handler(event, context)
     bucket_name = event['bucket_name']
     file_key = event['file_key']
     
-    try:
+    try
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
         data = response['Body'].read().decode('utf-8')
         contacts = json.loads(data)
         
         return {
-            'statusCode': 200,
-            'body': contacts
+            'statusCode':---200,
+            'body':---contacts
         }
-    except Exception as e:
-        logging.error(f"Error fetching file from S3: {str(e)}")
+    except Exception as e
+        logging.error(f"Error fetching file from S3:{str(e)}")
         return {
-            'statusCode': 500,
-            'body': f"Error fetching file from S3: {str(e)}"
+            'statusCode':500,
+            'body':f"Error fetching file from S3:{str(e)}"
         }
 import requests
 import json
@@ -32,40 +32,40 @@ ACTON_BASE_URL = "https://restapi.actonsoftware.com"
 CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
 CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
 
-def get_auth_token():
+def get_auth_token()
     url = f"{ACTON_BASE_URL}/auth"
     response = requests.post(url, data={
-        'clientId': CLIENT_ID,
-        'clientSecret': CLIENT_SECRET
+        'clientId':CLIENT_ID,
+        'clientSecret':CLIENT_SECRET
     })
     response.raise_for_status()
     return response.json()['token']
 
-def upsert_contact(contact):
+def upsert_contact(contact)
     token = get_auth_token()
     url = f"{ACTON_BASE_URL}/contacts"
     headers = {
-        'Authorization': f"Bearer {token}",
-        'Content-Type': 'application/json'
+        'Authorization':f"Bearer {token}",
+        'Content-Type':'application/json'
     }
     response = requests.post(url, json=contact, headers=headers)
     response.raise_for_status()
     return response.json()
 
-def lambda_handler(event, context):
+def lambda_handler(event, context)
     contacts = event['contacts']
     results = []
     
-    try:
-        for contact in contacts:
+    try
+        for contact in contacts
             result = upsert_contact(contact)
             results.append(result)
         
         return {
-            'statusCode': 200,
-            'body': results
+            'statusCode':200,
+            'body':results
         }
-    except Exception as e:
+    except Exception as e
         logging.error(f"Error upserting contacts: {str(e)}")
         return {
             'statusCode': 500,
