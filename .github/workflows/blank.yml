@@ -1,54 +1,60 @@
-name: Deploy AWS Step Functions Workflow
+import requests
+import os
 
-on:
-  push:
-    branches:
-      - main
+# Act-On API credentials
+CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
+CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
 
-jobs:
-  deploy:
-    runs-on: ubuntu-24.04  # Updated to the latest Ubuntu version
+# Act-On API URL
+account_id = 45241  # Replace with your actual Act-On account ID
+import_definition_id = "your_import_definition_id"  # Replace with your actual import definition ID
+url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+# Step 1: Authenticate and get an access token
+auth_url = "https://restapi.actonsoftware.com/auth"
+auth_data = {
+    "clientId": CLIENT_ID,
+    "clientSecret": CLIENT_SECRET
+}
 
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+auth_response = requests.post(auth_url, data=auth_data)
+auth_response.raise_for_status()  # Ensure successful authentication
 
-      - name: Create Lambda functions
-        run: |
-          zip fetch_marketing_list.zip fetch_marketing_list.py
-          aws lambda create-function --function-name fetch_marketing_list_lambda_handler \
-              --runtime python3.9 --handler fetch_marketing_list.lambda_handler \
-              --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-              --zip-file fileb://fetch_marketing_list.zip
+# Get the token from the response
+token = auth_response.json().get("token")
 
-          zip upsert_contacts.zip upsert_contacts_acton.py
-          aws lambda create-function --function-name upsert_contacts_lambda_handler \
-              --runtime python3.9 --handler upsert_contacts.lambda_handler \
-              --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-              --zip-file fileb://upsert_contacts.zip
+# Step 2: Define the headers with authorization
+headers = {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "Authorization": f"Bearer {token}"  # Add the Bearer token for authentication
+}
 
-          zip add_to_dss.zip add_to_dss.py
-          aws lambda create-function --function-name add_to_dss_lambda_handler \
-              --runtime python3.9 --handler add_to_dss.lambda_handler \
-              --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-              --zip-file fileb://add_to_dss.zip
+# Step 3: Define the data to be sent in the body (example contact data)
+data = {
+    "contacts": [
+        {
+            "email": "john.doe@example.com",
+            "firstName": "John",
+            "lastName": "Doe",
+            "company": "Example Corp",
+            "webinarName": "ON24_Webinar_12345"
+        },
+        {
+            "email": "jane.doe@example.com",
+            "firstName": "Jane",
+            "lastName": "Doe",
+            "company": "Example Corp",
+            "webinarName": "ON24_Webinar_12345"
+        }
+    ]
+}
 
-      - name: Create Step Functions State Machine
-        run: |
-          aws stepfunctions create-state-machine \
-            --name "ActOnIntegrationWorkflow" \
-            --definition file://step_functions_workflow.json \
-            --role-arn arn:aws:iam::ACCOUNT_ID:role/StepFunctionsRole
+# Step 4: Make the POST request to import contacts
+response = requests.post(url, json=data, headers=headers)
 
-      - name: Start Step Functions Execution
-        run: |
-          aws stepfunctions start-execution \
-            --state-machine-arn arn:aws:states:us-east-1:ACCOUNT_ID:stateMachine:ActOnIntegrationWorkflow \
-            --input '{"bucket_name": "my-bucket", "file_key": "marketing-list.json", "dss_id": "12345"}'
+# Check response status and print result
+if response.status_code == 200:
+    print("Contacts imported successfully:", response.text)
+else:
+    print("Failed to import contacts:", response.text)
