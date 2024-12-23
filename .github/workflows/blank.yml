@@ -4,7 +4,7 @@ import logging
 
 s3_client = boto3.client('s3')
 
-def lambda_handler(event, context):
+def lambda_handler(event, context)
     bucket_name = event['bucket_name']
     file_key = event['file_key']
     
