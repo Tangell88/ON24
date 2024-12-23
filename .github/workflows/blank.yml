@@ -1,84 +1,38 @@
 import boto3
 import json
 import logging
+import requests
+import os
 
+# Set up S3 client
 s3_client = boto3.client('s3')
 
-def lambda_handler(event, context)
+ACTON_BASE_URL = "https://restapi.actonsoftware.com"
+CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
+CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
+
+# Lambda to fetch marketing list from S3
+def fetch_marketing_list_lambda_handler(event, context):
     bucket_name = event['bucket_name']
     file_key = event['file_key']
     
-    try
+    try:
         response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
         data = response['Body'].read().decode('utf-8')
         contacts = json.loads(data)
         
         return {
-            'statusCode':---200,
-            'body':---contacts
+            'statusCode': 200,
+            'body': json.dumps(contacts)
         }
-    except Exception as e
-        logging.error(f"Error fetching file from S3:{str(e)}")
-        return {
-            'statusCode':500,
-            'body':f"Error fetching file from S3:{str(e)}"
-        }
-import requests
-import json
-import os
-import logging
-
-ACTON_BASE_URL = "https://restapi.actonsoftware.com"
-CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
-CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
-
-def get_auth_token()
-    url = f"{ACTON_BASE_URL}/auth"
-    response = requests.post(url, data={
-        'clientId':CLIENT_ID,
-        'clientSecret':CLIENT_SECRET
-    })
-    response.raise_for_status()
-    return response.json()['token']
-
-def upsert_contact(contact)
-    token = get_auth_token()
-    url = f"{ACTON_BASE_URL}/contacts"
-    headers = {
-        'Authorization':f"Bearer {token}",
-        'Content-Type':'application/json'
-    }
-    response = requests.post(url, json=contact, headers=headers)
-    response.raise_for_status()
-    return response.json()
-
-def lambda_handler(event, context)
-    contacts = event['contacts']
-    results = []
-    
-    try
-        for contact in contacts
-            result = upsert_contact(contact)
-            results.append(result)
-        
-        return {
-            'statusCode':200,
-            'body':results
-        }
-    except Exception as e
-        logging.error(f"Error upserting contacts: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error fetching file from S3: {str(e)}")
         return {
             'statusCode': 500,
-            'body': f"Error upserting contacts: {str(e)}"
+            'body': f"Error fetching file from S3: {str(e)}"
         }
-import requests
-import os
-import logging
 
-ACTON_BASE_URL = "https://restapi.actonsoftware.com"
-CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
-CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
-
+# Lambda to get Act-On authentication token
 def get_auth_token():
     url = f"{ACTON_BASE_URL}/auth"
     response = requests.post(url, data={
@@ -88,6 +42,40 @@ def get_auth_token():
     response.raise_for_status()
     return response.json()['token']
 
+# Lambda to upsert contacts to Act-On
+def upsert_contact(contact):
+    token = get_auth_token()
+    url = f"{ACTON_BASE_URL}/contacts"
+    headers = {
+        'Authorization': f"Bearer {token}",
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(url, json=contact, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+# Lambda to handle upserting contacts
+def upsert_contacts_lambda_handler(event, context):
+    contacts = event['contacts']
+    results = []
+    
+    try:
+        for contact in contacts:
+            result = upsert_contact(contact)
+            results.append(result)
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps(results)
+        }
+    except Exception as e:
+        logging.error(f"Error upserting contacts: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': f"Error upserting contacts: {str(e)}"
+        }
+
+# Lambda to add contacts to DSS
 def add_to_dss(contact_id, dss_id):
     token = get_auth_token()
     url = f"{ACTON_BASE_URL}/dss/{dss_id}/contacts"
@@ -99,7 +87,8 @@ def add_to_dss(contact_id, dss_id):
     response.raise_for_status()
     return response.json()
 
-def lambda_handler(event, context):
+# Lambda to handle adding contacts to DSS
+def add_to_dss_lambda_handler(event, context):
     contact_ids = event['contact_ids']
     dss_id = event['dss_id']
     results = []
@@ -111,7 +100,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'body': results
+            'body': json.dumps(results)
         }
     except Exception as e:
         logging.error(f"Error adding contacts to DSS: {str(e)}")
@@ -119,47 +108,50 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': f"Error adding contacts to DSS: {str(e)}"
         }
-{
-  "Comment": "AWS Act-On Integration Workflow",
-  "StartAt": "FetchMarketingList",
-  "States": {
-    "FetchMarketingList": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:fetch_marketing_list",
-      "Next": "UpsertContacts"
-    },
-    "UpsertContacts": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:upsert_contacts_acton",
-      "Next": "AddToDSS"
-    },
-    "AddToDSS": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:add_to_dss",
-      "End": true
+
+# Step Functions State Machine Definition
+step_functions_workflow = {
+    "Comment": "AWS Act-On Integration Workflow",
+    "StartAt": "FetchMarketingList",
+    "States": {
+        "FetchMarketingList": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:fetch_marketing_list_lambda_handler",
+            "Next": "UpsertContacts"
+        },
+        "UpsertContacts": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:upsert_contacts_lambda_handler",
+            "Next": "AddToDSS"
+        },
+        "AddToDSS": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:add_to_dss_lambda_handler",
+            "End": True
+        }
     }
-  }
 }
-zip fetch_marketing_list.zip fetch_marketing_list.py
-zip upsert_contacts_acton.zip upsert_contacts_acton.py
-zip add_to_dss.zip add_to_dss.py
 
-aws lambda create-function --function-name fetch_marketing_list \
-    --runtime python3.9 --handler fetch_marketing_list.lambda_handler \
-    --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-    --zip-file fileb://fetch_marketing_list.zip
+# AWS Lambda Deployment Commands (for local environment setup)
+# Zip the Python scripts and deploy them to AWS Lambda
 
-aws lambda create-function --function-name upsert_contacts_acton \
-    --runtime python3.9 --handler upsert_contacts_acton.lambda_handler \
-    --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-    --zip-file fileb://upsert_contacts_acton.zip
+# 1. Fetch Marketing List Lambda
+# Create ZIP file for Lambda
+os.system('zip fetch_marketing_list.zip fetch_marketing_list.py')
+os.system('aws lambda create-function --function-name fetch_marketing_list_lambda_handler --runtime python3.9 --handler fetch_marketing_list_lambda_handler.lambda_handler --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole --zip-file fileb://fetch_marketing_list.zip')
 
-aws lambda create-function --function-name add_to_dss \
-    --runtime python3.9 --handler add_to_dss.lambda_handler \
-    --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole \
-    --zip-file fileb://add_to_dss.zip
-aws stepfunctions create-state-machine --name "ActOnIntegrationWorkflow" \
-    --definition file://step_functions_workflow.json \
-    --role-arn arn:aws:iam::ACCOUNT_ID:role/StepFunctionsRole
-aws stepfunctions start-execution --state-machine-arn arn:aws:states:REGION:ACCOUNT_ID:stateMachine:ActOnIntegrationWorkflow \
-    --input '{"bucket_name": "my-bucket", "file_key": "marketing-list.json", "dss_id": "12345"}'
+# 2. Upsert Contacts Lambda
+# Create ZIP file for Lambda
+os.system('zip upsert_contacts_lambda.zip upsert_contacts_acton.py')
+os.system('aws lambda create-function --function-name upsert_contacts_lambda_handler --runtime python3.9 --handler upsert_contacts_lambda_handler.lambda_handler --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole --zip-file fileb://upsert_contacts_lambda.zip')
+
+# 3. Add to DSS Lambda
+# Create ZIP file for Lambda
+os.system('zip add_to_dss.zip add_to_dss.py')
+os.system('aws lambda create-function --function-name add_to_dss_lambda_handler --runtime python3.9 --handler add_to_dss_lambda_handler.lambda_handler --role arn:aws:iam::ACCOUNT_ID:role/LambdaRole --zip-file fileb://add_to_dss.zip')
+
+# 4. Create Step Functions State Machine
+os.system('aws stepfunctions create-state-machine --name "ActOnIntegrationWorkflow" --definition file://step_functions_workflow.json --role-arn arn:aws:iam::ACCOUNT_ID:role/StepFunctionsRole')
+
+# 5. Start Execution of Step Functions Workflow
+os.system('aws stepfunctions start-execution --state-machine-arn arn:aws:states:REGION:ACCOUNT_ID:stateMachine:ActOnIntegrationWorkflow --input \'{"bucket_name": "my-bucket", "file_key": "marketing-list.json", "dss_id": "12345"}\'')
