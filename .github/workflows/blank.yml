@@ -1,60 +1,93 @@
-import requests
-import os
+name: Act-On Contact Import Workflow
 
-# Act-On API credentials
-CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
-CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering of the workflow
 
-# Act-On API URL
-account_id = 45241  # Replace with your actual Act-On account ID
-import_definition_id = "your_import_definition_id"  # Replace with your actual import definition ID
-url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-# Step 1: Authenticate and get an access token
-auth_url = "https://restapi.actonsoftware.com/auth"
-auth_data = {
-    "clientId": CLIENT_ID,
-    "clientSecret": CLIENT_SECRET
-}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-auth_response = requests.post(auth_url, data=auth_data)
-auth_response.raise_for_status()  # Ensure successful authentication
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
 
-# Get the token from the response
-token = auth_response.json().get("token")
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-# Step 2: Define the headers with authorization
-headers = {
-    "accept": "application/json",
-    "content-type": "application/json",
-    "Authorization": f"Bearer {token}"  # Add the Bearer token for authentication
-}
+      - name: Run Act-On Contact Import
+        env:
+          ACTON_CLIENT_ID: ${{ secrets.ACTON_CLIENT_ID }}
+          ACTON_CLIENT_SECRET: ${{ secrets.ACTON_CLIENT_SECRET }}
+        run: |
+          python <<EOF
+          import requests
+          import os
 
-# Step 3: Define the data to be sent in the body (example contact data)
-data = {
-    "contacts": [
-        {
-            "email": "john.doe@example.com",
-            "firstName": "John",
-            "lastName": "Doe",
-            "company": "Example Corp",
-            "webinarName": "ON24_Webinar_12345"
-        },
-        {
-            "email": "jane.doe@example.com",
-            "firstName": "Jane",
-            "lastName": "Doe",
-            "company": "Example Corp",
-            "webinarName": "ON24_Webinar_12345"
-        }
-    ]
-}
+          # Act-On API credentials
+          CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
+          CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
 
-# Step 4: Make the POST request to import contacts
-response = requests.post(url, json=data, headers=headers)
+          # Act-On API URL
+          account_id = 45241  # Replace with your actual Act-On account ID
+          import_definition_id = "your_import_definition_id"  # Replace with your actual import definition ID
+          url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
 
-# Check response status and print result
-if response.status_code == 200:
-    print("Contacts imported successfully:", response.text)
-else:
-    print("Failed to import contacts:", response.text)
+          # Step 1: Authenticate and get an access token
+          auth_url = "https://restapi.actonsoftware.com/auth"
+          auth_data = {
+              "clientId": CLIENT_ID,
+              "clientSecret": CLIENT_SECRET
+          }
+
+          auth_response = requests.post(auth_url, data=auth_data)
+          auth_response.raise_for_status()  # Ensure successful authentication
+
+          # Get the token from the response
+          token = auth_response.json().get("token")
+
+          # Step 2: Define the headers with authorization
+          headers = {
+              "accept": "application/json",
+              "content-type": "application/json",
+              "Authorization": f"Bearer {token}"  # Add the Bearer token for authentication
+          }
+
+          # Step 3: Define the data to be sent in the body (example contact data)
+          data = {
+              "contacts": [
+                  {
+                      "email": "john.doe@example.com",
+                      "firstName": "John",
+                      "lastName": "Doe",
+                      "company": "Example Corp",
+                      "webinarName": "ON24_Webinar_12345"
+                  },
+                  {
+                      "email": "jane.doe@example.com",
+                      "firstName": "Jane",
+                      "lastName": "Doe",
+                      "company": "Example Corp",
+                      "webinarName": "ON24_Webinar_12345"
+                  }
+              ]
+          }
+
+          # Step 4: Make the POST request to import contacts
+          response = requests.post(url, json=data, headers=headers)
+
+          # Check response status and print result
+          if response.status_code == 200:
+              print("Contacts imported successfully:", response.text)
+          else:
+              print("Failed to import contacts:", response.text)
+          EOF
