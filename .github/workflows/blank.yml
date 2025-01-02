@@ -25,17 +25,13 @@ jobs:
           pip install requests
 
       - name: Run Act-On Contact Import
-        env:
-          ACTON_CLIENT_ID: ${{ secrets.ACTON_CLIENT_ID }}
-          ACTON_CLIENT_SECRET: ${{ secrets.ACTON_CLIENT_SECRET }}
         run: |
           python <<EOF
           import requests
-          import os
 
           # Act-On API credentials
-          CLIENT_ID = os.getenv('ACTON_CLIENT_ID')
-          CLIENT_SECRET = os.getenv('ACTON_CLIENT_SECRET')
+          CLIENT_ID = "tiNjJxcncdfBtlx85SsdaV51RrzWGbdY"
+          CLIENT_SECRET = "KXuR87le3QAzUNwKRVHhh_Vdd4YwqgHY7FxDGgo_KLdSmRAMo_w9hx2JYn3P47uw"
 
           # Act-On API URL
           account_id = 45241  # Replace with your actual Act-On account ID
