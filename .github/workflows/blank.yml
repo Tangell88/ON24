@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Will be updated to ubuntu-24.04 soon, no immediate action required
+    runs-on: ubuntu-latest  # Optionally switch to ubuntu-24.04 for future-proofing
 
     steps:
       - name: Checkout repository
@@ -38,6 +38,12 @@ jobs:
               CLIENT_ID = os.getenv('CLIENT_ID')
               CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
+              if not CLIENT_ID or not CLIENT_SECRET:
+                  print("Error: CLIENT_ID or CLIENT_SECRET is missing.")
+                  exit(1)
+
+              print("Client ID and Secret loaded successfully.")
+
               # Act-On API URL
               account_id = 45241  # Replace with your actual Act-On account ID
               import_definition_id = "your_import_definition_id"  # Replace with your actual import definition ID
@@ -50,11 +56,21 @@ jobs:
                   "clientSecret": CLIENT_SECRET
               }
 
+              print("Sending authentication request...")
               auth_response = requests.post(auth_url, data=auth_data)
-              auth_response.raise_for_status()  # Ensure successful authentication
+
+              if auth_response.status_code != 200:
+                  print("Authentication failed:", auth_response.status_code, auth_response.text)
+                  exit(1)
 
               # Get the token from the response
               token = auth_response.json().get("token")
+
+              if not token:
+                  print("Error: Failed to retrieve authentication token.")
+                  exit(1)
+
+              print("Authentication successful. Token received.")
 
               # Step 2: Define the headers with authorization
               headers = {
@@ -83,7 +99,7 @@ jobs:
                   ]
               }
 
-              # Step 4: Make the POST request to import contacts
+              print("Sending contact import request...")
               response = requests.post(url, json=data, headers=headers)
 
               # Check response status and print result
@@ -91,8 +107,9 @@ jobs:
                   print("Contacts imported successfully:", response.text)
               else:
                   print("Failed to import contacts:", response.status_code, response.text)
+                  exit(1)
 
           except Exception as e:
-              print(f"An error occurred: {str(e)}")
+              print(f"An unexpected error occurred: {str(e)}")
               exit(1)
           EOF
