@@ -46,7 +46,8 @@ jobs:
 
               # Act-On API URL
               account_id = 45241  # Replace with your actual Act-On account ID
-              url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts"
+              import_definition_id = "l_unified_list"  # Replace with your actual import definition ID
+              url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
 
               # Step 1: Authenticate and get an access token
               auth_url = "https://restapi.actonsoftware.com/auth"
