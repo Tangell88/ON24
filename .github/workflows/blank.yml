@@ -44,13 +44,13 @@ jobs:
 
               print("Client ID and Secret loaded successfully.")
 
-              # Act-On API URL
+              # Act-On API URL (Check if this endpoint is correct)
               account_id = 45241  # Replace with your actual Act-On account ID
               import_definition_id = "l_unified_list"  # Replace with your actual import definition ID
               url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
 
               # Step 1: Authenticate and get an access token
-              auth_url = "https://restapi.actonsoftware.com/auth"
+              auth_url = "https://restapi.actonsoftware.com/auth"  # Verify if this is the correct authentication endpoint
               auth_data = {
                   "clientId": CLIENT_ID,
                   "clientSecret": CLIENT_SECRET
