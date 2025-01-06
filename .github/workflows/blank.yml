@@ -44,14 +44,13 @@ jobs:
 
               print("Client ID and Secret loaded successfully.")
 
-              # Act-On API URL for authentication
-              auth_url = "https://api.actonsoftware.com/v1/oauth/token"  # Correct API endpoint for token retrieval
+              # Correct Act-On authentication URL
+              auth_url = "https://restapi.actonsoftware.com/auth"  # Correct API endpoint for authentication
 
               # Authentication data (OAuth2 token request)
               auth_data = {
-                  "grant_type": "client_credentials",  # Use appropriate grant type for API authentication
-                  "client_id": CLIENT_ID,
-                  "client_secret": CLIENT_SECRET
+                  "clientId": CLIENT_ID,
+                  "clientSecret": CLIENT_SECRET
               }
 
               # Step 1: Authenticate and get an access token
@@ -67,7 +66,7 @@ jobs:
                   exit(1)
 
               # Get the token from the response
-              token = auth_response.json().get("access_token")
+              token = auth_response.json().get("token")
 
               if not token:
                   print("Error: Failed to retrieve authentication token.")
