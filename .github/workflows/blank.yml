@@ -46,8 +46,7 @@ jobs:
 
               # Act-On API URL
               account_id = 45241  # Replace with your actual Act-On account ID
-              import_definition_id = "your_import_definition_id"  # Replace with your actual import definition ID
-              url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts/{import_definition_id}"
+              url = f"https://api.actonsoftware.com/ucl/v2/{account_id}/import/contacts"
 
               # Step 1: Authenticate and get an access token
               auth_url = "https://restapi.actonsoftware.com/auth"
@@ -58,6 +57,10 @@ jobs:
 
               print("Sending authentication request...")
               auth_response = requests.post(auth_url, data=auth_data)
+
+              # Debugging the response
+              print(f"Authentication response status code: {auth_response.status_code}")
+              print(f"Authentication response body: {auth_response.text}")
 
               if auth_response.status_code != 200:
                   print("Authentication failed:", auth_response.status_code, auth_response.text)
