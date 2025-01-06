@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Optionally switch to ubuntu-24.04 for future-proofing
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
